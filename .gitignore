@@ -1,0 +1,5 @@
+scheme/
+__pycache__
+test.scm
+.idea/
+*.pyc
