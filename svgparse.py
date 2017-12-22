@@ -10,7 +10,6 @@
 # PARAMETERS #
 ##############
 
-direct_draw   = True
 fill_shapes   = True
 scale         = 0.05
 step_size     = 0.10
@@ -223,7 +222,7 @@ def parse_path(Mx, My, clz):
             del ctrl_pts[:]
             ctrl_pts.append(abs_pt)
 
-        # Output the quadratic Bézier if possible
+        # Output the Bézier curve if possible
         if mode == 'curve' and len(ctrl_pts) == num_req_pts:
             bezier_pts = bezier(*ctrl_pts)
             turtle_traverse(bezier_pts)
