@@ -3,7 +3,8 @@ Simple experiment: redrawing an arbitrary image using turtle graphics. Implement
 
 Of course, it was never necessary to involve Scheme. In the interest of the general, non-Scheming population, I've added a version of the code that uses Python only. This is currently the standard version.
 
-@TODO figure out long horizontal lines
+@TODO add more examples<br>
+@TODO add GIF of turtle at work
 
 ![bird](out/bird.jpg)
 
@@ -49,5 +50,4 @@ With the exception of `bird.jpg`, all `in/*.jpg` photographs were taken by [Tony
 ```
 cd turtledraw
 python3 svgparse.py in/cross.svg
-@TODO add more examples
 ```
