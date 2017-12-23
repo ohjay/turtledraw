@@ -3,9 +3,6 @@ Simple experiment: redrawing an arbitrary image using turtle graphics. Implement
 
 Of course, it was never necessary to involve Scheme. In the interest of the general, non-Scheming population, I've added a version of the code that uses Python only. This is currently the standard version.
 
-@TODO scale and positioning<br>
-@TODO figure out why images are drawn upside down (probably just have to reverse y-direction)
-
 ![bird](out/bird.jpg)
 
 ### Usage

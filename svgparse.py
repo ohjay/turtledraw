@@ -10,10 +10,14 @@
 # PARAMETERS #
 ##############
 
-fill_shapes   = True
-scale         = 0.05
-step_size     = 0.10
+fill_shapes   = False
+draw_boundary = True
+step_size     = 0.5
 bezier_option = 'cubic'
+
+# Only set these if you actually know the window size
+DEFAULT_WINDOW_WIDTH  = 720
+DEFAULT_WINDOW_HEIGHT = 675
 
 """
 svgparse.py
@@ -27,9 +31,9 @@ path data commands. Assumes that [fill] colors are determined by an enclosing `g
 Specification of supported SVG v1.0 elements and attributes:
 ---
 - <svg>    metadata about image
-- width    (pixel) width
-- height   (pixel) height
-- viewBox  four numbers min-x, min-y, width, and height, which specify the original-size rectangle shape
+- width    viewport (pixel) width
+- height   viewport (pixel) height
+- viewBox  four numbers min-x, min-y, width, and height, which specify the shape of the user coordinate system
 - <g>      container used to group SVG elements
 - fill     specifies the drawing color within a group
 - <path>   specifies a path through control points
@@ -37,8 +41,34 @@ Specification of supported SVG v1.0 elements and attributes:
 - M        move to (x, y), which are absolute coordinates
 - m        move by (dx, dy) – relative coordinates
 - l        draws a line, dx to the right and dy downward
-- c        cubic Bézier curve, where coordinates are specified relatively to the intial point
+- c        cubic Bézier curve, where coordinates are specified relative to the intial point
 - z        close path
+
+
+For future reference:
+---
+The positive x-axis points to the right in both turtle graphics and SVG.
+However, the positive y-axis points UP in turtle graphics and DOWN in SVG.
+To handle this, we will transform all absolute y-coordinates as y = height - y
+before manipulating them within the angle/distance calculator (where +y -> up).
+
+On a related note, (0, 0) in Python turtle graphics denotes the point in the center of the canvas.
+In SVG, (0, 0) is assumed to be the top left corner of the canvas.
+To handle this, we will transform all points by (-canvas width / 2, -canvas height / 2),
+which essentially translates (0, 0) to the bottom left corner of the canvas.
+
+Finally, we will assume that the default window size for Python turtles always holds (even if using Scheme).
+If you'd like to override this, please update the WINDOW_{WIDTH, HEIGHT} parameters at the top of the file.
+We do not explicitly set the window size because the necessary command is not implemented in 61A Scheme.
+
+
+Scaling:
+---
+We expand the scope of the canvas to include the entire window, minus a bit of padding around the outer edge.
+In other words, we use the window dimensions (minus padding) as the canvas dimensions.
+
+We then rescale coordinates according to the viewBox values and the canvas dimensions,
+such that drawings take up the entire screen.
 
 
 To implement piecewise cubic Bézier curves, for which control points are defined as `c` components:
@@ -109,17 +139,6 @@ def turtle_speed(speed, overwrite=False):
         with open(outfile, 'w' if overwrite else 'a') as out:
             out.write('(speed %d)\n' % speed)
 
-def turtle_setpos(x, y, overwrite=False):
-    """Moves to a certain position."""
-    if direct_draw:
-        turtle.penup()
-        turtle.setposition(int(round(x * scale)), int(round(y * scale)))
-        turtle.pendown()
-    else:
-        with open(outfile, 'w' if overwrite else 'a') as out:
-            out.write('(penup) (setposition %d %d) (pendown)\n' % (int(round(x * scale)), int(round(y * scale))))
-    return x, y
-
 def turtle_color(color, overwrite=False):
     if direct_draw:
         turtle.color(color)
@@ -141,23 +160,47 @@ def turtle_end_fill():
         with open(outfile, 'a') as out:
             out.write('(end_fill)\n')
 
-def turtle_traverse(pts):
+def turtle_hide():
+    if direct_draw:
+        turtle.hideturtle()
+    else:
+        with open(outfile, 'a') as out:
+            out.write('(hideturtle)\n')
+
+def turtle_setpos(x, y, overwrite=False, keep_pen_down=False):
+    """Moves to a certain position.
+    Input: (x, y) - a point in absolute turtle coordinates
+    """
+    if direct_draw:
+        if not keep_pen_down:
+            turtle.penup()
+        turtle.setposition(x, y)
+        if not keep_pen_down:
+            turtle.pendown()
+    else:
+        with open(outfile, 'w' if overwrite else 'a') as out:
+            if keep_pen_down:
+                out.write('(setposition %f %f)\n' % (x, y))
+            else:
+                out.write('(penup) (setposition %f %f) (pendown)\n' % (x, y))
+    return x, y
+
+def turtle_traverse(pts, setpos=True):
     """Draws straight lines between the given points.
-    
-    Input: pts: a D x 2 matrix of points (in absolute coordinates)
+    Input: pts - a D x 2 matrix of points (in absolute turtle coordinates)
     """
     if not direct_draw:
         out = open(outfile, 'a')
     prev_x, prev_y = pts[0]
-    prev_x, prev_y = round(prev_x * scale), round(prev_y * scale)
+    if setpos:
+        turtle_setpos(prev_x, prev_y)
     for x, y in pts[1:]:
-        x, y = round(x * scale), round(y * scale)
         angle, distance = angle_dist((prev_x, prev_y), (x, y))
         if direct_draw:
             turtle.setheading(angle)
             turtle.forward(distance)
         else:
-            out.write('(setheading %.3f) (forward %.3f)\n' % (angle, distance))
+            out.write('(setheading %f) (forward %f)\n' % (angle, distance))
         prev_x, prev_y = x, y
     if not direct_draw:
         out.close()
@@ -173,8 +216,8 @@ def angle_dist(P0, P1):
     The angle represents the clockwise rotation in degrees from a north-facing orientation.
     Essentially, this function demystifies the vector from P0 to P1.
     
-    x -> right
-    y -> down
+    +x -> right
+    +y -> up
     
     >>> ad1 = angle_dist((1, 2), (3, 4))
     >>> round(ad1[0], 1)
@@ -206,29 +249,44 @@ def parse_path(Mx, My, clz):
     """Parses the path and writes the corresponding Scheme code to OUTFILE.
     Incidentally, our piecewise Bézier curves should involve 4 + 3n control points (for some n).
     
+    It doesn't affect anything in this function,
+    but since we're still assuming the SVG coordinate system at this point,
+    +x -> right
+    +y -> down
+
     Input:
     - Mx, My: integer (x, y) starting point coordinates
     - clz: the path description as a list of string coordinates and `c` / `l` / `z` / `m` labels
     """
-    mode, close, ctrl_pts = None, False, [(Mx, My)]
-    prev_move = turtle_setpos(Mx, My)
-    
+    mode, close = None, False
+    ctrl_pts_svg = [(Mx, My)]
+    ctrl_pts_tur = [svg_to_turtle(Mx, My)]
+    turtle_setpos(*ctrl_pts_tur[-1])
+    prev_move_svg = ctrl_pts_svg[-1]
+
     def _rel_draw(dx, dy):
-        abs_pt = (ctrl_pts[-1][0] + dx, ctrl_pts[-1][1] + dy)
-        if mode == 'curve' and len(ctrl_pts) < num_req_pts:
-            ctrl_pts.append(abs_pt)
+        abs_pt_svg = (ctrl_pts_svg[-1][0] + dx, ctrl_pts_svg[-1][1] + dy)
+        abs_pt_tur = svg_to_turtle(*abs_pt_svg)
+        if mode == 'curve' and len(ctrl_pts_tur) < num_req_pts:
+            ctrl_pts_svg.append(abs_pt_svg)
+            ctrl_pts_tur.append(abs_pt_tur)
         elif mode == 'line':
-            turtle_traverse(np.array([ctrl_pts[-1], abs_pt]))
-            del ctrl_pts[:]
-            ctrl_pts.append(abs_pt)
+            turtle_traverse(np.array([ctrl_pts_tur[-1], abs_pt_tur]), setpos=False)
+            del ctrl_pts_svg[:]
+            del ctrl_pts_tur[:]
+            ctrl_pts_svg.append(abs_pt_svg)
+            ctrl_pts_tur.append(abs_pt_tur)
 
         # Output the Bézier curve if possible
-        if mode == 'curve' and len(ctrl_pts) == num_req_pts:
-            bezier_pts = bezier(*ctrl_pts)
-            turtle_traverse(bezier_pts)
-            latest_pt = ctrl_pts[-1]
-            del ctrl_pts[:]
-            ctrl_pts.append(latest_pt)
+        if mode == 'curve' and len(ctrl_pts_tur) == num_req_pts:
+            bezier_pts = bezier(*ctrl_pts_tur)
+            turtle_traverse(bezier_pts, setpos=False)
+            latest_pt_svg = ctrl_pts_svg[-1]
+            latest_pt_tur = ctrl_pts_tur[-1]
+            del ctrl_pts_svg[:]
+            del ctrl_pts_tur[:]
+            ctrl_pts_svg.append(latest_pt_svg)
+            ctrl_pts_tur.append(latest_pt_tur)
 
     # Go through two list elements (x- and y-coords) during every iteration
     for dx, dy in zip(*[iter(clz)] * 2):
@@ -237,9 +295,12 @@ def parse_path(Mx, My, clz):
         elif dx[0] == 'l':
             mode, dx = 'line', dx[1:]
         elif dx[0] == 'm':
-            curr_pt = (ctrl_pts[-1][0] + int(dx[1:]), ctrl_pts[-1][1] + int(dy))
-            prev_move = turtle_setpos(*curr_pt)
-            ctrl_pts = [curr_pt]
+            curr_pt_svg = (ctrl_pts_svg[-1][0] + int(dx[1:]), ctrl_pts_svg[-1][1] + int(dy))
+            curr_pt_tur = svg_to_turtle(*curr_pt_svg)
+            turtle_setpos(*curr_pt_tur)
+            prev_move_svg = curr_pt_svg
+            ctrl_pts_svg = [curr_pt_svg]
+            ctrl_pts_tur = [curr_pt_tur]
             continue
         elif dx[0].isalpha():
             print('WARNING: unrecognized attribute (%s)' % dx[0])
@@ -249,7 +310,7 @@ def parse_path(Mx, My, clz):
 
         _rel_draw(dx, dy)
         if close:
-            _rel_draw(prev_move[0] - ctrl_pts[-1][0], prev_move[1] - ctrl_pts[-1][1])
+            _rel_draw(prev_move_svg[0] - ctrl_pts_svg[-1][0], prev_move_svg[1] - ctrl_pts_svg[-1][1])
             close = False
 
 if __name__ == '__main__':
@@ -266,6 +327,9 @@ if __name__ == '__main__':
         import tkinter
         turtle.title('Turtledraw')
         turtle.mode('logo')
+        screen = turtle.getscreen()
+        window_width = screen.window_width()
+        window_height = screen.window_height()
     else:
         import os
         OUTFOLDER = 'out'
@@ -275,17 +339,52 @@ if __name__ == '__main__':
         if '.' in infile_base:
             infile_base = infile_base[:infile_base.rfind('.')]
         outfile = os.path.join(OUTFOLDER, '%s.scm' % infile_base)
-
-    # Overwrite the output file
-    turtle_speed(0, overwrite=True)
+        window_width = DEFAULT_WINDOW_WIDTH
+        window_height = DEFAULT_WINDOW_HEIGHT
 
     import xml.etree.ElementTree
     svgroot = xml.etree.ElementTree.parse(infile).getroot()
 
-    height = float(svgroot.attrib.get('height', None)[:-2])
     width = float(svgroot.attrib.get('width', None)[:-2])
-    vb_width, vb_height = svgroot.attrib.get('viewBox', None).split()[-2:]
-    scale_x, scale_y = float(vb_height) / height, float(vb_width) / width
+    height = float(svgroot.attrib.get('height', None)[:-2])
+    vb_min_x, vb_min_y, vb_width, vb_height = svgroot.attrib.get('viewBox', None).split()
+    vb_min_x, vb_min_y, vb_width, vb_height = [float(d) for d in (vb_min_x, vb_min_y, vb_width, vb_height)]
+    assert vb_min_x == 0 and vb_min_y == 0, 'viewBox translations are not currently supported ' \
+                                            '(min-x=%r, min-y=%r)' % (vb_min_x, vb_min_y)
+
+    padding = 20
+    canvas_width = window_width - padding * 2
+    canvas_height = window_height - padding * 2
+    canvas_aspect_ratio = canvas_width / canvas_height
+    view_box_aspect_ratio = vb_width / vb_height
+
+    # Compute coordinate transform info
+    if canvas_aspect_ratio == view_box_aspect_ratio:
+        x_scale = float(canvas_width) / vb_width
+        y_scale = float(canvas_height) / vb_height
+    elif view_box_aspect_ratio > 1:
+        x_scale = float(canvas_width) / vb_width
+        y_scale = x_scale
+    else:
+        y_scale = float(canvas_height) / vb_height
+        x_scale = y_scale
+    x_shift, y_shift = -float(canvas_width) / 2, -float(canvas_height) / 2  # translation to apply to all coords
+
+    def svg_to_turtle(x, y):
+        """Transform (absolute) coordinates in SVG system to (absolute) coordinates in turtle system."""
+        return x * x_scale + x_shift, canvas_height - y * y_scale + y_shift
+
+    # Overwrite the output file
+    turtle_speed(0, overwrite=True)
+
+    if draw_boundary:
+        turtle_traverse([
+            (x_shift, y_shift),
+            (x_shift + canvas_width, y_shift),
+            (x_shift + canvas_width, y_shift + canvas_height),
+            (x_shift, y_shift + canvas_height),
+            (x_shift, y_shift),
+        ])
 
     for g in svgroot:
         if g.tag.rstrip()[-1] != 'g':
@@ -304,6 +403,7 @@ if __name__ == '__main__':
             if fill_shapes:
                 turtle_end_fill()
 
+    turtle_hide()
     if direct_draw:
         turtle.exitonclick()
         print('[+] Drawing complete.')
