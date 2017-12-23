@@ -22,7 +22,11 @@ clip             = True
 DEFAULT_WINDOW_WIDTH  = 720
 DEFAULT_WINDOW_HEIGHT = 675
 
-NO_ANIM_UPDATE = 'path'  # either 'path' or 'group' (case-sensitive); 'group' is faster but less entertaining
+# Custom viewport size (set to None to use default)
+WINDOW_WIDTH_OVERRIDE  = None  # either an integer or None
+WINDOW_HEIGHT_OVERRIDE = None  # either an integer or None
+
+NO_ANIM_UPDATE = 'group'  # either 'path' or 'group' (case-sensitive); 'group' is faster but less entertaining
 
 """
 svgparse.py
@@ -360,6 +364,11 @@ if __name__ == '__main__':
         outfile = os.path.join(OUTFOLDER, '%s.scm' % infile_base)
         window_width = DEFAULT_WINDOW_WIDTH
         window_height = DEFAULT_WINDOW_HEIGHT
+
+    if WINDOW_WIDTH_OVERRIDE is not None:
+        window_width = WINDOW_WIDTH_OVERRIDE
+    if WINDOW_HEIGHT_OVERRIDE is not None:
+        window_height = WINDOW_HEIGHT_OVERRIDE
 
     import xml.etree.ElementTree
     svgroot = xml.etree.ElementTree.parse(infile).getroot()
