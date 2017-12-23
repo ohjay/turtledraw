@@ -58,7 +58,7 @@ To handle this, we will transform all points by (-canvas width / 2, -canvas heig
 which essentially translates (0, 0) to the bottom left corner of the canvas.
 
 Finally, we will assume that the default window size for Python turtles always holds (even if using Scheme).
-If you'd like to override this, please update the WINDOW_{WIDTH, HEIGHT} parameters at the top of the file.
+If you'd like to override this, please update the DEFAULT_WINDOW_{WIDTH, HEIGHT} parameters at the top of the file.
 We do not explicitly set the window size because the necessary command is not implemented in 61A Scheme.
 
 
@@ -379,11 +379,11 @@ if __name__ == '__main__':
 
     if draw_boundary:
         turtle_traverse([
-            (x_shift, y_shift),
-            (x_shift + canvas_width, y_shift),
-            (x_shift + canvas_width, y_shift + canvas_height),
-            (x_shift, y_shift + canvas_height),
-            (x_shift, y_shift),
+            svg_to_turtle(0, 0),
+            svg_to_turtle(vb_width - 1, 0),
+            svg_to_turtle(vb_width - 1, vb_height - 1),
+            svg_to_turtle(0, vb_height - 1),
+            svg_to_turtle(0, 0),
         ])
 
     for g in svgroot:
@@ -405,7 +405,7 @@ if __name__ == '__main__':
 
     turtle_hide()
     if direct_draw:
-        turtle.exitonclick()
         print('[+] Drawing complete.')
+        turtle.exitonclick()
     else:
         print('[+] Wrote result to %s.' % outfile)
