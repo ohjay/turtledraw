@@ -31,7 +31,7 @@ WINDOW_WIDTH_OVERRIDE  = None  # either an integer or None
 WINDOW_HEIGHT_OVERRIDE = None  # either an integer or None
 
 NO_ANIM_UPDATE      = 'group'  # either 'path' or 'group' (case-sensitive); 'group' is faster but less entertaining
-NO_ANIM_UPDATE_RATE = 1
+NO_ANIM_UPDATE_RATE = 1000
 
 """
 svgparse.py
@@ -435,7 +435,7 @@ if __name__ == '__main__':
     if draw_boundary:
         turtle_traverse([turtle_00, turtle_w0, turtle_wh, turtle_0h, turtle_00])
 
-    def intersperse_elements(list_of_lists):
+    def intersperse_elements(list_of_lists, end_oriented=False):
         """Given a list of lists [[x00, x01, x02, ...], [x10, x11, ...], [x20, x21, ...], ...],
         yields one element from every list IN ORDER until all of the elements have been exhausted:
         x00, x10, x20, ..., x01, x11, x21, ..., x02, x12, x22, ...
@@ -448,10 +448,13 @@ if __name__ == '__main__':
         (specifying from which list the element came).
         """
         max_sublist_len = max([len(sublst) for sublst in list_of_lists])
+        len_diffs = [max_sublist_len - len(sublst) for sublst in list_of_lists]
         for r in range(max_sublist_len):
             for c in range(len(list_of_lists)):
-                if r < len(list_of_lists[c]):
+                if not end_oriented and r < len(list_of_lists[c]):
                     yield list_of_lists[c][r], c
+                elif end_oriented and 0 <= r - len_diffs[c] < len(list_of_lists[c]):
+                    yield list_of_lists[c][r - len_diffs[c]], c
 
     def color_group(g):
         """Sets turtle color according to the 'fill' attribute of the group G.
@@ -487,7 +490,8 @@ if __name__ == '__main__':
     if intersperse:
         # Potential problem: largest groups still dominate color space
         groups = list(svgroot)
-        for _j, (path, _i) in enumerate(intersperse_elements([list(g) for g in svgroot])):
+        END_ORIENTED = True
+        for _j, (path, _i) in enumerate(intersperse_elements([list(g) for g in svgroot], END_ORIENTED)):
             if not color_group(groups[_i]):
                 continue
             handle_path(path)
