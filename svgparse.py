@@ -10,14 +10,19 @@
 # PARAMETERS #
 ##############
 
-fill_shapes   = False
-draw_boundary = True
-step_size     = 0.5
-bezier_option = 'cubic'
+fill_shapes      = False
+draw_boundary    = True
+step_size        = 0.5
+bezier_option    = 'cubic'
+cubic_unfinished = True
+animation        = False
+clip             = True
 
 # Only set these if you actually know the window size
 DEFAULT_WINDOW_WIDTH  = 720
 DEFAULT_WINDOW_HEIGHT = 675
+
+NO_ANIM_UPDATE = 'path'  # either 'path' or 'group' (case-sensitive); 'group' is faster but less entertaining
 
 """
 svgparse.py
@@ -105,7 +110,10 @@ def cubic_bezier(P0, P1, P2, P3):
     
     Input: each point should be a tuple consisting of an x- and a y-coordinate.
     """
-    t_mat = np.array([[1, t, t * t, t * t * t] for t in np.arange(0, 1, step_size)])
+    t_range = list(np.arange(0, 1, step_size))
+    if not cubic_unfinished:
+        t_range.append(1.0)
+    t_mat = np.array([[1, t, t * t, t * t * t] for t in t_range])
     P_mat = np.array([P0, P1, P2, P3])
     return np.dot(t_mat, np.dot(M, P_mat))  # optimal chain multiplication order
 
@@ -171,6 +179,8 @@ def turtle_setpos(x, y, overwrite=False, keep_pen_down=False):
     """Moves to a certain position.
     Input: (x, y) - a point in absolute turtle coordinates
     """
+    if clip:
+        x, y = turtle_clip(x, y)
     if direct_draw:
         if not keep_pen_down:
             turtle.penup()
@@ -191,10 +201,12 @@ def turtle_traverse(pts, setpos=True):
     """
     if not direct_draw:
         out = open(outfile, 'a')
-    prev_x, prev_y = pts[0]
+    prev_x, prev_y = turtle_clip(*pts[0]) if clip else pts[0]
     if setpos:
         turtle_setpos(prev_x, prev_y)
     for x, y in pts[1:]:
+        if clip:
+            x, y = turtle_clip(x, y)
         angle, distance = angle_dist((prev_x, prev_y), (x, y))
         if direct_draw:
             turtle.setheading(angle)
@@ -259,6 +271,8 @@ def parse_path(Mx, My, clz):
     - clz: the path description as a list of string coordinates and `c` / `l` / `z` / `m` labels
     """
     mode, close = None, False
+    if clip:
+        Mx, My = svg_clip(Mx, My)
     ctrl_pts_svg = [(Mx, My)]
     ctrl_pts_tur = [svg_to_turtle(Mx, My)]
     turtle_setpos(*ctrl_pts_tur[-1])
@@ -266,7 +280,10 @@ def parse_path(Mx, My, clz):
 
     def _rel_draw(dx, dy):
         abs_pt_svg = (ctrl_pts_svg[-1][0] + dx, ctrl_pts_svg[-1][1] + dy)
+        if clip and svg_oob(*abs_pt_svg):
+            return  # ignore points that are out-of-bounds
         abs_pt_tur = svg_to_turtle(*abs_pt_svg)
+
         if mode == 'curve' and len(ctrl_pts_tur) < num_req_pts:
             ctrl_pts_svg.append(abs_pt_svg)
             ctrl_pts_tur.append(abs_pt_tur)
@@ -296,6 +313,8 @@ def parse_path(Mx, My, clz):
             mode, dx = 'line', dx[1:]
         elif dx[0] == 'm':
             curr_pt_svg = (ctrl_pts_svg[-1][0] + int(dx[1:]), ctrl_pts_svg[-1][1] + int(dy))
+            if clip:
+                curr_pt_svg = svg_clip(*curr_pt_svg)
             curr_pt_tur = svg_to_turtle(*curr_pt_svg)
             turtle_setpos(*curr_pt_tur)
             prev_move_svg = curr_pt_svg
@@ -374,17 +393,35 @@ if __name__ == '__main__':
         """Transform (absolute) coordinates in SVG system to (absolute) coordinates in turtle system."""
         return x * x_scale + x_shift, canvas_height - y * y_scale + y_shift
 
+    # Boundary calculations
+    turtle_00 = svg_to_turtle(0, 0)
+    turtle_w0 = svg_to_turtle(vb_width, 0)
+    turtle_wh = svg_to_turtle(vb_width, vb_height)
+    turtle_0h = svg_to_turtle(0, vb_height)
+
+    def svg_oob(x, y):
+        """True if (x, y) is out-of-bounds in SVG coordinates."""
+        return x < 0 or x > vb_width or y < 0 or y > vb_height
+
+    def turtle_oob(x, y):
+        """True if (x, y) is out-of-bounds in turtle coordinates."""
+        return x < turtle_00[0] or x > turtle_w0[0] or y < turtle_0h[1] or y > turtle_00[1]
+
+    def svg_clip(x, y):
+        """Clip (x, y) such that it is in-bounds according to SVG coordinates."""
+        return np.clip(x, 0, vb_width), np.clip(y, 0, vb_height)
+
+    def turtle_clip(x, y):
+        """Clip (x, y) such that it is in-bounds according to turtle coordinates."""
+        return np.clip(x, turtle_00[0], turtle_w0[0]), np.clip(y, turtle_0h[1], turtle_00[1])
+
     # Overwrite the output file
     turtle_speed(0, overwrite=True)
 
+    if direct_draw and not animation:
+        turtle.tracer(0, 0)
     if draw_boundary:
-        turtle_traverse([
-            svg_to_turtle(0, 0),
-            svg_to_turtle(vb_width - 1, 0),
-            svg_to_turtle(vb_width - 1, vb_height - 1),
-            svg_to_turtle(0, vb_height - 1),
-            svg_to_turtle(0, 0),
-        ])
+        turtle_traverse([turtle_00, turtle_w0, turtle_wh, turtle_0h, turtle_00])
 
     for g in svgroot:
         if g.tag.rstrip()[-1] != 'g':
@@ -402,9 +439,15 @@ if __name__ == '__main__':
             parse_path(Mx, My, clz)
             if fill_shapes:
                 turtle_end_fill()
+            if direct_draw and not animation and NO_ANIM_UPDATE != 'group':
+                turtle.update()
+        if direct_draw and not animation and NO_ANIM_UPDATE == 'group':
+            turtle.update()
 
     turtle_hide()
     if direct_draw:
+        if not animation:
+            turtle.update()
         print('[+] Drawing complete.')
         turtle.exitonclick()
     else:
