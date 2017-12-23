@@ -11,12 +11,16 @@
 ##############
 
 fill_shapes      = False
-draw_boundary    = True
+draw_boundary    = False
 step_size        = 0.5
 bezier_option    = 'cubic'
-cubic_unfinished = False
+cubic_unfinished = False  # good one to play with (to guarantee clipping, set to False)
 animation        = False
 clip             = True
+intersperse      = True  # intersperse group paths to diversify colors
+
+# Python-specific (won't work if converting to Scheme code)
+pen_width = 1  # set to None for default
 
 # Only set these if you actually know the window size
 DEFAULT_WINDOW_WIDTH  = 720
@@ -144,6 +148,11 @@ else:
 ###################
 # TURTLE GRAPHICS #
 ###################
+
+def turtle_pensize(width):
+    """Set the width of the pen."""
+    if direct_draw:
+        turtle.pensize(width)
 
 def turtle_speed(speed, overwrite=False):
     if direct_draw:
@@ -418,34 +427,82 @@ if __name__ == '__main__':
 
     # Overwrite the output file
     turtle_speed(0, overwrite=True)
+    if pen_width is not None:
+        turtle_pensize(pen_width)
 
     if direct_draw and not animation:
         turtle.tracer(0, 0)
     if draw_boundary:
         turtle_traverse([turtle_00, turtle_w0, turtle_wh, turtle_0h, turtle_00])
 
-    for _i, g in enumerate(svgroot):
+    def intersperse_elements(list_of_lists):
+        """Given a list of lists [[x00, x01, x02, ...], [x10, x11, ...], [x20, x21, ...], ...],
+        yields one element from every list IN ORDER until all of the elements have been exhausted:
+        x00, x10, x20, ..., x01, x11, x21, ..., x02, x12, x22, ...
+
+        In other words, traverses a 2D list in column-major order.
+        The sublists do not need to be of uniform length; if a sublist has been exhausted
+        it will simply be passed over when its turn comes.
+
+        To avoid confusion, the 1D list index will be returned as well
+        (specifying from which list the element came).
+        """
+        max_sublist_len = max([len(sublst) for sublst in list_of_lists])
+        for r in range(max_sublist_len):
+            for c in range(len(list_of_lists)):
+                if r < len(list_of_lists[c]):
+                    yield list_of_lists[c][r], c
+
+    def color_group(g):
+        """Sets turtle color according to the 'fill' attribute of the group G.
+        Returns True upon success, and False upon failure.
+        """
         if g.tag.rstrip()[-1] != 'g':
-            continue
+            return False
         color = g.attrib.get('fill', '#000000').upper()
         turtle_color(color)
-        for _j, path in enumerate(g):
-            if path.tag.rstrip()[-4:] != 'path':
-                print('WARNING: unrecognized element (%s)' % path.tag.rstrip())
-                continue
-            d = path.attrib['d'].split()
-            Mx, My, clz = int(d[0][1:]), int(d[1]), d[2:]
-            if fill_shapes:
-                turtle_begin_fill()
-            parse_path(Mx, My, clz)
-            if fill_shapes:
-                turtle_end_fill()
-            if direct_draw and not animation \
-                    and NO_ANIM_UPDATE != 'group' and (_j + 1) % NO_ANIM_UPDATE_RATE == 0:
-                turtle.update()
-        if direct_draw and not animation \
-                and NO_ANIM_UPDATE == 'group' and (_i + 1) % NO_ANIM_UPDATE_RATE == 0:
+        return True
+
+    def handle_path(path):
+        """Draws the path specified by PATH.
+        Returns True upon success, and False upon failure.
+        """
+        if path.tag.rstrip()[-4:] != 'path':
+            print('WARNING: unrecognized element (%s)' % path.tag.rstrip())
+            return False
+        d = path.attrib['d'].split()
+        Mx, My, clz = int(d[0][1:]), int(d[1]), d[2:]
+        if fill_shapes:
+            turtle_begin_fill()
+        parse_path(Mx, My, clz)
+        if fill_shapes:
+            turtle_end_fill()
+        return True
+
+    def try_do_update(idx):
+        """Performs an update if IDX matches up with NO_ANIM_UPDATE_RATE."""
+        if (idx + 1) % NO_ANIM_UPDATE_RATE == 0:
             turtle.update()
+
+    if intersperse:
+        # Potential problem: largest groups still dominate color space
+        groups = list(svgroot)
+        for _j, (path, _i) in enumerate(intersperse_elements([list(g) for g in svgroot])):
+            if not color_group(groups[_i]):
+                continue
+            handle_path(path)
+            if direct_draw and not animation:
+                try_do_update(_j)
+    else:
+        for _i, g in enumerate(svgroot):
+            if not color_group(g):
+                continue
+            for _j, path in enumerate(g):
+                handle_path(path)
+                if direct_draw and not animation and NO_ANIM_UPDATE != 'group':
+                    try_do_update(_j)
+            if direct_draw and not animation and NO_ANIM_UPDATE == 'group':
+                try_do_update(_i)
 
     turtle_hide()
     if direct_draw:
