@@ -14,7 +14,7 @@ fill_shapes      = False
 draw_boundary    = True
 step_size        = 0.5
 bezier_option    = 'cubic'
-cubic_unfinished = True
+cubic_unfinished = False
 animation        = False
 clip             = True
 
@@ -183,8 +183,6 @@ def turtle_setpos(x, y, overwrite=False, keep_pen_down=False):
     """Moves to a certain position.
     Input: (x, y) - a point in absolute turtle coordinates
     """
-    if clip:
-        x, y = turtle_clip(x, y)
     if direct_draw:
         if not keep_pen_down:
             turtle.penup()
@@ -275,8 +273,6 @@ def parse_path(Mx, My, clz):
     - clz: the path description as a list of string coordinates and `c` / `l` / `z` / `m` labels
     """
     mode, close = None, False
-    if clip:
-        Mx, My = svg_clip(Mx, My)
     ctrl_pts_svg = [(Mx, My)]
     ctrl_pts_tur = [svg_to_turtle(Mx, My)]
     turtle_setpos(*ctrl_pts_tur[-1])
@@ -284,10 +280,7 @@ def parse_path(Mx, My, clz):
 
     def _rel_draw(dx, dy):
         abs_pt_svg = (ctrl_pts_svg[-1][0] + dx, ctrl_pts_svg[-1][1] + dy)
-        if clip and svg_oob(*abs_pt_svg):
-            return  # ignore points that are out-of-bounds
         abs_pt_tur = svg_to_turtle(*abs_pt_svg)
-
         if mode == 'curve' and len(ctrl_pts_tur) < num_req_pts:
             ctrl_pts_svg.append(abs_pt_svg)
             ctrl_pts_tur.append(abs_pt_tur)
@@ -317,8 +310,6 @@ def parse_path(Mx, My, clz):
             mode, dx = 'line', dx[1:]
         elif dx[0] == 'm':
             curr_pt_svg = (ctrl_pts_svg[-1][0] + int(dx[1:]), ctrl_pts_svg[-1][1] + int(dy))
-            if clip:
-                curr_pt_svg = svg_clip(*curr_pt_svg)
             curr_pt_tur = svg_to_turtle(*curr_pt_svg)
             turtle_setpos(*curr_pt_tur)
             prev_move_svg = curr_pt_svg

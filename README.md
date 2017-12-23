@@ -45,7 +45,7 @@ python3 scheme/scheme.py out/bird.scm
 ```
 
 #### To run the other provided examples
-With the exception of `bird.jpg`, all `.jpg` images within the `in` folder were taken by [Tonya Nguyen](https://tonyanguyen.github.io/).
+With the exception of `bird.jpg`, all `in/*.jpg` photographs were taken by [Tonya Nguyen](https://tonyanguyen.github.io/).
 ```
 cd turtledraw
 python3 svgparse.py in/cross.svg
