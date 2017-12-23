@@ -26,7 +26,8 @@ DEFAULT_WINDOW_HEIGHT = 675
 WINDOW_WIDTH_OVERRIDE  = None  # either an integer or None
 WINDOW_HEIGHT_OVERRIDE = None  # either an integer or None
 
-NO_ANIM_UPDATE = 'group'  # either 'path' or 'group' (case-sensitive); 'group' is faster but less entertaining
+NO_ANIM_UPDATE      = 'group'  # either 'path' or 'group' (case-sensitive); 'group' is faster but less entertaining
+NO_ANIM_UPDATE_RATE = 1
 
 """
 svgparse.py
@@ -423,12 +424,12 @@ if __name__ == '__main__':
     if draw_boundary:
         turtle_traverse([turtle_00, turtle_w0, turtle_wh, turtle_0h, turtle_00])
 
-    for g in svgroot:
+    for _i, g in enumerate(svgroot):
         if g.tag.rstrip()[-1] != 'g':
             continue
         color = g.attrib.get('fill', '#000000').upper()
         turtle_color(color)
-        for path in g:
+        for _j, path in enumerate(g):
             if path.tag.rstrip()[-4:] != 'path':
                 print('WARNING: unrecognized element (%s)' % path.tag.rstrip())
                 continue
@@ -439,9 +440,11 @@ if __name__ == '__main__':
             parse_path(Mx, My, clz)
             if fill_shapes:
                 turtle_end_fill()
-            if direct_draw and not animation and NO_ANIM_UPDATE != 'group':
+            if direct_draw and not animation \
+                    and NO_ANIM_UPDATE != 'group' and (_j + 1) % NO_ANIM_UPDATE_RATE == 0:
                 turtle.update()
-        if direct_draw and not animation and NO_ANIM_UPDATE == 'group':
+        if direct_draw and not animation \
+                and NO_ANIM_UPDATE == 'group' and (_i + 1) % NO_ANIM_UPDATE_RATE == 0:
             turtle.update()
 
     turtle_hide()
