@@ -50,22 +50,17 @@ Run the file using the [Scheme interpreter](https://inst.eecs.berkeley.edu/~cs61
 Alternatively, you can paste the generated code into Jen's [online interpreter](https://scheme.cs61a.org/).
 
 ## Examples
+Many input images have been provided in the `in` folder as examples. Note: with the exception of `bird.jpg`, all `in/*.jpg` photographs were taken by [Tonya Nguyen](https://tonyanguyen.github.io/). (Also, speaking of `bird.jpg`, its redraw output looks a lot better if the `cubic_unfinished` parameter is set to `True`.)
+
 ##### _no Scheme_
 ```
 cd turtledraw
-python3 svgparse.py in/bird.svg
+python3 svgparse.py in/*.svg
 ```
 
 ##### _Scheme_
 ```
 cd turtledraw
-python3 svgparse.py --scheme in/bird.svg
-python3 scheme/scheme.py out/bird.scm
-```
-
-#### To run the other examples
-With the exception of `bird.jpg`, all `in/*.jpg` photographs were taken by [Tonya Nguyen](https://tonyanguyen.github.io/).
-```
-cd turtledraw
-python3 svgparse.py in/cross.svg
+python3 svgparse.py --scheme in/*.svg
+python3 scheme/scheme.py out/*.scm
 ```
