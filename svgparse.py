@@ -14,13 +14,14 @@ fill_shapes      = False
 draw_boundary    = False
 step_size        = 0.5
 bezier_option    = 'cubic'
-cubic_unfinished = False  # good one to play with (to guarantee clipping, set to False)
+cubic_unfinished = True  # good one to play with (to guarantee clipping, set to False)
 animation        = False
 clip             = True
 intersperse      = True  # intersperse group paths to diversify colors
 
 # Python-specific (won't work if converting to Scheme code)
-pen_width = 1  # set to None for default
+pen_width   = 3  # set to None for default
+save_output = False
 
 # Only set these if you actually know the window size
 DEFAULT_WINDOW_WIDTH  = 720
@@ -346,6 +347,22 @@ if __name__ == '__main__':
     infile = args.input_file
     direct_draw = not args.scheme
 
+    import sys
+    python_ver = sys.version_info[0]
+
+    import os
+    OUTFOLDER = 'out'
+    if not os.path.isdir(OUTFOLDER):
+        os.makedirs(OUTFOLDER)
+    infile_base = os.path.basename(infile)
+    if '.' in infile_base:
+        infile_base = infile_base[:infile_base.rfind('.')]
+    if direct_draw:
+        outfile_ext = 'png' if python_ver >= 3 else 'svg'
+    else:
+        outfile_ext = 'scm'
+    outfile = os.path.join(OUTFOLDER, '%s.%s' % (infile_base, outfile_ext))
+
     if direct_draw:
         import turtle
         import tkinter
@@ -355,14 +372,6 @@ if __name__ == '__main__':
         window_width = screen.window_width()
         window_height = screen.window_height()
     else:
-        import os
-        OUTFOLDER = 'out'
-        if not os.path.isdir(OUTFOLDER):
-            os.makedirs(OUTFOLDER)
-        infile_base = os.path.basename(infile)
-        if '.' in infile_base:
-            infile_base = infile_base[:infile_base.rfind('.')]
-        outfile = os.path.join(OUTFOLDER, '%s.scm' % infile_base)
         window_width = DEFAULT_WINDOW_WIDTH
         window_height = DEFAULT_WINDOW_HEIGHT
 
@@ -513,6 +522,24 @@ if __name__ == '__main__':
         if not animation:
             turtle.update()
         print('[+] Drawing complete.')
+        if save_output:
+            # Source for following code: https://stackoverflow.com/a/25051183
+            if python_ver >= 3:
+                import tempfile
+                tmpdir = tempfile.mkdtemp()
+                svgfile = os.path.join(tmpdir, 'tmp.svg')
+            else:
+                svgfile = outfile
+            import canvasvg
+            ts = turtle.getscreen().getcanvas()
+            canvasvg.saveall(svgfile, ts)
+            if python_ver >= 3:
+                import cairosvg
+                with open(svgfile) as svg_input, open(outfile, 'wb') as png_output:
+                    cairosvg.svg2png(bytestring=svg_input.read(), write_to=png_output)
+                import shutil
+                shutil.rmtree(tmpdir)
+            print('[+] Output saved to %s.' % outfile)
         turtle.exitonclick()
     else:
         print('[+] Wrote result to %s.' % outfile)

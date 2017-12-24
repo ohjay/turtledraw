@@ -6,7 +6,29 @@ Of course, it was never necessary to involve Scheme. In the interest of the gene
 @TODO add more examples<br>
 @TODO add GIF of turtle at work
 
-![bird](out/bird.jpg)
+![bird](out/comparisons/bird.jpg)
+
+### Setup
+```
+git clone https://github.com/ohjay/turtledraw.git
+cd turtledraw
+pip install -r requirements.txt
+```
+
+#### Requirements
+- Python (must be 3.4+ if the ability to save as PNG is desired)
+- NumPy
+- [`canvasvg`](https://github.com/WojciechMula/canvas2svg)
+- [CairoSVG](http://cairosvg.org/) (if Python 3)
+
+Technically, everything can be run with Python 2.7 as well. However, images will be saved as SVGs instead of PNGs.
+
+#### Troubleshooting
+##### `OSError: dlopen() failed to load a library: cairo / cairo-2`
+Try running
+```
+brew install python3 cairo pango gdk-pixbuf libffi
+```
 
 ### Usage
 #### 1. To vectorize an image as an SVG file
