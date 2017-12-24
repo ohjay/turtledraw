@@ -8,7 +8,7 @@ Of course, it was never necessary to involve Scheme. In the interest of the gene
 
 ![bird](out/comparisons/bird.jpg)
 
-### Setup
+## Setup
 ```
 git clone https://github.com/ohjay/turtledraw.git
 cd turtledraw
@@ -16,25 +16,23 @@ pip install -r requirements.txt
 ```
 
 #### Requirements
-- Python (must be 3.4+ if the ability to save as PNG is desired)
-- NumPy
-- [`canvasvg`](https://github.com/WojciechMula/canvas2svg)
+- [Python](https://www.python.org/) (must be 3.4+ if the ability to save as PNG is desired)
+- [NumPy](http://www.numpy.org/)
+- [canvasvg](https://github.com/WojciechMula/canvas2svg)
 - [CairoSVG](http://cairosvg.org/) (if Python 3)
 
 Technically, everything can be run with Python 2.7 as well. However, images will be saved as SVGs instead of PNGs.
 
 #### Troubleshooting
-##### `OSError: dlopen() failed to load a library: cairo / cairo-2`
-Try running
-```
-brew install python3 cairo pango gdk-pixbuf libffi
-```
+- `OSError: dlopen() failed to load a library: cairo / cairo-2`<br>
+  Try running `brew install python3 cairo pango gdk-pixbuf libffi`.
 
-### Usage
+## Usage
 #### 1. To vectorize an image as an SVG file
 Use this [online tool](https://www.vectorizer.io/). (_Do_ use this one; the code is meant to run with the SVG spec associated with this tool specifically.)
 
 #### 2. To draw an SVG file using turtle graphics (no Scheme involved)
+Modify the parameters at the top of `svgparse.py` as desired, then run
 ```
 python3 svgparse.py <path_to_svg_file>
 ```
@@ -51,9 +49,7 @@ Run the file using the [Scheme interpreter](https://inst.eecs.berkeley.edu/~cs61
 
 Alternatively, you can paste the generated code into Jen's [online interpreter](https://scheme.cs61a.org/).
 
-### Examples
-This example uses the `bird.svg` file in the `in` folder.
-
+## Examples
 ##### _no Scheme_
 ```
 cd turtledraw
@@ -67,7 +63,7 @@ python3 svgparse.py --scheme in/bird.svg
 python3 scheme/scheme.py out/bird.scm
 ```
 
-#### To run the other provided examples
+#### To run the other examples
 With the exception of `bird.jpg`, all `in/*.jpg` photographs were taken by [Tonya Nguyen](https://tonyanguyen.github.io/).
 ```
 cd turtledraw
