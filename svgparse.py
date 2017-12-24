@@ -20,7 +20,7 @@ clip             = True
 intersperse      = True  # intersperse group paths to diversify colors
 
 # Python-specific (won't work if converting to Scheme code)
-pen_width   = 3  # set to None for default
+pen_width   = 2  # set to None for default
 save_output = False
 
 # Only set these if you actually know the window size
