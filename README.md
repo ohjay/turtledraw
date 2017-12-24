@@ -3,7 +3,6 @@ Simple experiment: redrawing an arbitrary image using turtle graphics. Implement
 
 Of course, it was never necessary to involve Scheme. In the interest of the general, non-Scheming population, I've added a version of the code that uses Python only. This is currently the standard version.
 
-@TODO add more examples<br>
 @TODO add GIF of turtle at work
 
 ![bird](out/comparisons/bird.jpg)
@@ -64,3 +63,9 @@ cd turtledraw
 python3 svgparse.py --scheme in/*.svg
 python3 scheme/scheme.py out/*.scm
 ```
+
+![examples 5, 19, 27, 32, 37](out/comparisons/examples0.jpg)
+![examples 4, 6, 7, 16, 12, 23](out/comparisons/examples1.jpg)
+
+The parameters can make a big difference in the style and quality of the output, as evidenced here:
+![example 41](out/comparisons/example41.jpg)

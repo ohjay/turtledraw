@@ -20,7 +20,7 @@ clip             = True
 intersperse      = True  # intersperse group paths to diversify colors
 
 # Python-specific (won't work if converting to Scheme code)
-pen_width   = 2  # set to None for default
+pen_width   = 1  # set to None for default
 save_output = False
 
 # Only set these if you actually know the window size
@@ -28,11 +28,11 @@ DEFAULT_WINDOW_WIDTH  = 720
 DEFAULT_WINDOW_HEIGHT = 675
 
 # Custom viewport size (set to None to use default)
-WINDOW_WIDTH_OVERRIDE  = None  # either an integer or None
-WINDOW_HEIGHT_OVERRIDE = None  # either an integer or None
+WINDOW_WIDTH_OVERRIDE  = 550  # either an integer or None
+WINDOW_HEIGHT_OVERRIDE = 550  # either an integer or None
 
 NO_ANIM_UPDATE      = 'group'  # either 'path' or 'group' (case-sensitive); 'group' is faster but less entertaining
-NO_ANIM_UPDATE_RATE = 1000
+NO_ANIM_UPDATE_RATE = 2000
 
 """
 svgparse.py
