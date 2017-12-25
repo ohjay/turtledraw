@@ -3,9 +3,8 @@ Simple experiment: redrawing an arbitrary image using turtle graphics. Implement
 
 Of course, it was never necessary to involve Scheme. In the interest of the general, non-Scheming population, I've added a version of the code that uses Python only. This is currently the standard version.
 
-@TODO add GIF of turtle at work
-
 ![bird](out/comparisons/bird.jpg)
+[![](https://user-images.githubusercontent.com/8358648/34330119-9d3218d8-e8cc-11e7-8b39-b5302aa124d3.gif)](https://raw.githubusercontent.com/ohjay/turtledraw/master/out/comparisons/turtle.gif)
 
 ## Setup
 ```
@@ -67,5 +66,5 @@ python3 scheme/scheme.py out/*.scm
 ![examples 5, 19, 27, 32, 37](out/comparisons/examples0.jpg)
 ![examples 4, 6, 7, 16, 12, 23](out/comparisons/examples1.jpg)
 
-The parameters can make a big difference in the style and quality of the output, as evidenced here:
+**Note:** the parameters can make a big difference in the style and quality of the output, as evidenced below.
 ![example 41](out/comparisons/example41.jpg)

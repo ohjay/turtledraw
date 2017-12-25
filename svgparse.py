@@ -73,7 +73,7 @@ To handle this, we will transform all points by (-canvas width / 2, -canvas heig
 which essentially translates (0, 0) to the bottom left corner of the canvas.
 
 Finally, we will assume that the default window size for Python turtles always holds (even if using Scheme).
-If you'd like to override this, please update the DEFAULT_WINDOW_{WIDTH, HEIGHT} parameters at the top of the file.
+If you'd like to override this, please update the WINDOW_{WIDTH, HEIGHT}_OVERRIDE parameters at the top of the file.
 We do not explicitly set the window size because the necessary command is not implemented in 61A Scheme.
 
 
